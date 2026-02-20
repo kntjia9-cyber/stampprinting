@@ -28,8 +28,12 @@ interface Order {
     items: OrderItem[];
 }
 
+import { useSession } from "next-auth/react";
+import { getUser, updateUserInfo } from "@/app/actions/user";
+
 export default function CheckoutPage() {
     const router = useRouter();
+    const { data: session } = useSession();
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -47,6 +51,22 @@ export default function CheckoutPage() {
         fetchOrders();
         loadGlobalSettings();
     }, []);
+
+    // Load user info when session is available
+    useEffect(() => {
+        if (session?.user?.id && session.user.id !== "guest-user") {
+            const loadUserInfo = async () => {
+                const userData = await getUser(session.user!.id!) as any;
+                if (userData) {
+                    setName(userData.name || "");
+                    setEmail(userData.email || "");
+                    setPhone(userData.phone || "");
+                    setAddress(userData.address || "");
+                }
+            };
+            loadUserInfo();
+        }
+    }, [session]);
 
     const loadGlobalSettings = async () => {
         const result = await (await import("@/app/actions/settings")).getSettings();
@@ -110,6 +130,15 @@ export default function CheckoutPage() {
         setSubmitting(true);
 
         try {
+            // Update user profile info if logged in
+            if (session?.user?.id && session.user.id !== "guest-user") {
+                await updateUserInfo(session.user.id, {
+                    name,
+                    phone,
+                    address
+                });
+            }
+
             const formData = new FormData();
             formData.append("name", name);
             formData.append("address", address);

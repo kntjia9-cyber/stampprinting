@@ -1,20 +1,24 @@
+import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export function middleware(request: NextRequest) {
-    const { pathname } = request.nextUrl;
+export default auth((req) => {
+    const { nextUrl } = req;
+    const isLoggedIn = !!req.auth;
+    const role = (req.auth?.user as any)?.role;
 
-    // Check if the path starts with /admin but is not /admin/login
-    if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
-        const session = request.cookies.get("admin_session");
+    const isAdminRoute = nextUrl.pathname.startsWith("/admin");
 
-        if (!session) {
-            return NextResponse.redirect(new URL("/admin/login", request.url));
+    // If it's an admin route, enforce login and ADMIN role
+    if (isAdminRoute) {
+        if (!isLoggedIn || role !== "ADMIN") {
+            // Redirect to the main login page for unauthorized access
+            return NextResponse.redirect(new URL("/login?error=unauthorized_admin", nextUrl));
         }
     }
 
     return NextResponse.next();
-}
+});
 
 export const config = {
     matcher: ["/admin/:path*"],

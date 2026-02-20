@@ -241,6 +241,15 @@ export async function updateStampTemplate(id: string, formData: FormData) {
 }
 
 export async function deleteStampTemplate(id: string) {
+    // Manually delete related records first to avoid foreign key constraint errors
+    await (prisma as any).templateBackground.deleteMany({
+        where: { templateId: id }
+    });
+
+    await (prisma as any).orderItem.deleteMany({
+        where: { templateId: id }
+    });
+
     await prisma.stampTemplate.delete({
         where: { id },
     });

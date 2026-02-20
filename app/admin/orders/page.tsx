@@ -60,12 +60,22 @@ interface Order {
 export default function OrdersPage() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+    const [selectedOrder, setSelectedOrder] = useState<any>(null);
     const [printingItem, setPrintingItem] = useState<OrderItem | null>(null);
+    const [trackingInputs, setTrackingInputs] = useState<{ [key: number]: string }>({});
+    const [savingTrackingId, setSavingTrackingId] = useState<number | null>(null);
 
     useEffect(() => {
         fetchOrders();
     }, []);
+
+    useEffect(() => {
+        const inputs: { [key: number]: string } = {};
+        orders.forEach(order => {
+            inputs[order.id] = (order as any).trackingNumber || "";
+        });
+        setTrackingInputs(inputs);
+    }, [orders]);
 
     const fetchOrders = async () => {
         try {
@@ -103,6 +113,32 @@ export default function OrdersPage() {
         } catch (error) {
             console.error("Error updating status:", error);
             alert("ไม่สามารถอัพเดทสถานะได้");
+        }
+    };
+
+    const handleSaveTracking = async (orderId: number) => {
+        const trackingNumber = trackingInputs[orderId] || "";
+        setSavingTrackingId(orderId);
+
+        try {
+            const response = await fetch(`/api/admin/orders/${orderId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ trackingNumber })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                alert("บันทึกเลขพัสดุเรียบร้อยแล้ว");
+                fetchOrders();
+            } else {
+                alert("เกิดข้อผิดพลาด: " + data.error);
+            }
+        } catch (error) {
+            console.error("Error saving tracking:", error);
+            alert("ไม่สามารถบันทึกเลขพัสดุได้");
+        } finally {
+            setSavingTrackingId(null);
         }
     };
 
@@ -188,9 +224,29 @@ export default function OrdersPage() {
                                 ))}
                             </div>
 
-                            <div className="mt-4 flex justify-between items-center text-xs text-slate-500">
-                                <span>📞 {order.customerPhone}</span>
-                                <span className="line-clamp-1 max-w-[50%]">📍 {order.customerAddress}</span>
+                            <div className="mt-4 flex flex-wrap justify-between items-center gap-4 border-t border-white/5 pt-4">
+                                <div className="flex items-center gap-4 text-xs text-slate-500">
+                                    <span>📞 {order.customerPhone}</span>
+                                    <span className="line-clamp-1">📍 {order.customerAddress}</span>
+                                </div>
+
+                                <div className="flex items-center gap-2 bg-black/30 p-2 rounded-xl border border-white/10" onClick={(e) => e.stopPropagation()}>
+                                    <span className="text-[10px] text-purple-300 font-bold uppercase hidden md:inline">Tracking:</span>
+                                    <input
+                                        type="text"
+                                        value={trackingInputs[order.id] || ""}
+                                        onChange={(e) => setTrackingInputs({ ...trackingInputs, [order.id]: e.target.value })}
+                                        className="bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-purple-500 w-32 md:w-48"
+                                        placeholder="เลขพัสดุ..."
+                                    />
+                                    <button
+                                        onClick={() => handleSaveTracking(order.id)}
+                                        disabled={savingTrackingId === order.id}
+                                        className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-lg font-bold text-xs transition-all disabled:opacity-50"
+                                    >
+                                        {savingTrackingId === order.id ? "..." : "บันทึก"}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     ))}
@@ -230,7 +286,7 @@ export default function OrdersPage() {
                                 <div>
                                     <h4 className="text-purple-400 font-bold mb-2 uppercase text-xs tracking-wider">Order Items</h4>
                                     <div className="space-y-3">
-                                        {selectedOrder.items.map((item) => (
+                                        {selectedOrder.items.map((item: OrderItem) => (
                                             <div key={item.id} className="bg-white/5 rounded-xl p-3 flex gap-4 items-center">
                                                 <div className="w-16 h-16 bg-white rounded-lg overflow-hidden shrink-0">
                                                     <Image src={item.customImageUrl} alt="item" className="w-full h-full object-cover" width={64} height={64} unoptimized />
@@ -244,7 +300,7 @@ export default function OrdersPage() {
                                                         {(item.quantity * item.price).toFixed(2)} ฿
                                                     </div>
                                                     <button
-                                                        onClick={() => handlePrint(item)}
+                                                        onClick={() => handlePrint(item as OrderItem)}
                                                         className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg transition-all"
                                                     >
                                                         🖨️ พิมพ์

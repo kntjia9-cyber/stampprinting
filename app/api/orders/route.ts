@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { uploadToCloudinary } from "@/lib/cloudinary";
+import { auth } from "@/auth";
 
 export async function GET(request: NextRequest) {
     try {
-        const guestUserId = "guest-user";
+        const session = await auth();
+        const userId = session?.user?.id || "guest-user";
 
-        // Fetch only pending orders for guest user
+        // Fetch only pending orders for user
         const orders = await prisma.order.findMany({
             where: {
-                userId: guestUserId,
+                userId: userId,
                 status: "PENDING"
             },
             include: {
@@ -80,25 +82,28 @@ export async function POST(request: NextRequest) {
             customImageUrl = uploadResult.url;
         }
 
-        // For now, create a guest order
-        const guestUserId = "guest-user";
+        // For now, create a guest order if no session
+        const session = await auth();
+        const userId = session?.user?.id || "guest-user";
 
-        // Use upsert to ensure guest user exists
-        await prisma.user.upsert({
-            where: { id: guestUserId },
-            update: {},
-            create: {
-                id: guestUserId,
-                name: "Guest User",
-                role: "USER"
-            }
-        });
+        // Use upsert to ensure user exists (especially for guest)
+        if (userId === "guest-user") {
+            await prisma.user.upsert({
+                where: { id: userId },
+                update: {},
+                create: {
+                    id: userId,
+                    name: "Guest User",
+                    role: "USER"
+                }
+            });
+        }
 
         // Check for existing PENDING order
-        console.log("Checking for existing order for user:", guestUserId);
+        console.log("Checking for existing order for user:", userId);
         const existingOrder = await prisma.order.findFirst({
             where: {
-                userId: guestUserId,
+                userId: userId,
                 status: "PENDING"
             }
         });
@@ -127,11 +132,11 @@ export async function POST(request: NextRequest) {
                 }
             });
         } else {
-            console.log("Creating new order for user:", guestUserId);
+            console.log("Creating new order for user:", userId);
             // Create a new order
             order = await (prisma.order as any).create({
                 data: {
-                    userId: guestUserId,
+                    userId: userId,
                     total: price * quantity,
                     status: "PENDING",
                     items: {

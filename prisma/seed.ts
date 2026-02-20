@@ -1,12 +1,33 @@
 import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
 async function main() {
     console.log('Start seeding ...')
 
-    // Clear existing data
-    await prisma.stampTemplate.deleteMany()
+    // Create Admin User
+    const adminEmail = 'admin@admin.com'
+    const adminPassword = await bcrypt.hash('admin1234', 10)
+
+    await prisma.user.upsert({
+        where: { email: adminEmail },
+        update: {
+            password: adminPassword,
+            role: 'ADMIN',
+            name: 'System Admin'
+        },
+        create: {
+            email: adminEmail,
+            password: adminPassword,
+            role: 'ADMIN',
+            name: 'System Admin'
+        }
+    })
+    console.log(`Admin user created: ${adminEmail} / admin1234`)
+
+    // Clear existing data (Note: Careful with deleteMany in production)
+    // await prisma.stampTemplate.deleteMany()
 
     const templates = [
         {
