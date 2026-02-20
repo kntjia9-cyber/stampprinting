@@ -95,6 +95,7 @@ model StampTemplate {
   whiteBorderHeight Float?  // Height of the white rectangle (print only)
   whiteBorderX     Float?   // X position for printing
   whiteBorderY     Float?   // Y position for printing
+  price            Float    @default(100)
   isPublic         Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

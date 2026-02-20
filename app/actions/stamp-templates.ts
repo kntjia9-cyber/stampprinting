@@ -52,6 +52,7 @@ export async function createStampTemplate(formData: FormData) {
         const userImageRowSpacing = parseSafeFloat(formData.get("userImageRowSpacing"), 0);
         const userImagePreviewColumnSpacing = parseSafeFloat(formData.get("userImagePreviewColumnSpacing"), 0);
         const userImagePreviewRowSpacing = parseSafeFloat(formData.get("userImagePreviewRowSpacing"), 0);
+        const price = parseSafeFloat(formData.get("price"), 100);
 
         const realStampSampleUrl = formData.get("realStampSampleUrl") as string;
         const realStampX = parseOptionalFloat(formData.get("realStampX"));
@@ -112,6 +113,7 @@ export async function createStampTemplate(formData: FormData) {
             whiteBorderHeight,
             whiteBorderX,
             whiteBorderY,
+            price,
             backgrounds: {
                 create: backgrounds
             }
@@ -153,6 +155,7 @@ export async function updateStampTemplate(id: string, formData: FormData) {
         const userImageRowSpacing = parseSafeFloat(formData.get("userImageRowSpacing"), 0);
         const userImagePreviewColumnSpacing = parseSafeFloat(formData.get("userImagePreviewColumnSpacing"), 0);
         const userImagePreviewRowSpacing = parseSafeFloat(formData.get("userImagePreviewRowSpacing"), 0);
+        const price = parseSafeFloat(formData.get("price"), 100);
 
         const realStampSampleUrl = formData.get("realStampSampleUrl") as string;
         const realStampX = parseOptionalFloat(formData.get("realStampX"));
@@ -216,6 +219,7 @@ export async function updateStampTemplate(id: string, formData: FormData) {
             whiteBorderHeight,
             whiteBorderX,
             whiteBorderY,
+            price,
             backgrounds: {
                 deleteMany: {}, // Clear existing backgrounds
                 create: backgrounds.map(bg => ({ url: bg.url })) // Create new ones

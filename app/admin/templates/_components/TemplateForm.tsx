@@ -54,15 +54,28 @@ export default function TemplateForm({ template }: TemplateFormProps) {
             className="space-y-6 max-w-2xl bg-white/5 p-8 rounded-xl border border-white/10"
         >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="col-span-full">
-                    <label className="block text-sm font-medium text-slate-300 mb-1">Template Name</label>
-                    <input
-                        name="name"
-                        defaultValue={template?.name}
-                        required
-                        className="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        placeholder="e.g. Square Small (3x3 cm)"
-                    />
+                <div className="flex gap-4 col-span-full">
+                    <div className="flex-[2]">
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Template Name</label>
+                        <input
+                            name="name"
+                            defaultValue={template?.name}
+                            required
+                            className="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            placeholder="e.g. Square Small (3x3 cm)"
+                        />
+                    </div>
+                    <div className="flex-1">
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Price (Baht)</label>
+                        <input
+                            name="price"
+                            type="number"
+                            step="0.01"
+                            defaultValue={template?.price || 100}
+                            required
+                            className="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                    </div>
                 </div>
 
                 <div className="col-span-full flex items-center gap-3 bg-slate-800/50 p-4 rounded-lg border border-white/5">

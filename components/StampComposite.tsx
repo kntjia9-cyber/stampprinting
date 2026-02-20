@@ -33,6 +33,15 @@ interface StampTemplate {
     whiteBorderY: number | null;
 }
 
+interface PlacedSticker {
+    id: string;
+    content: string;
+    x: number;
+    y: number;
+    scale: number;
+    rotation: number;
+}
+
 interface StampCompositeProps {
     template: StampTemplate;
     backgroundUrl: string;
@@ -45,6 +54,7 @@ interface StampCompositeProps {
         contrast: number;
         filter: string;
     };
+    placedStickers?: PlacedSticker[];
     showBackground?: boolean;
     isPrint?: boolean;
     hideRealStamp?: boolean;
@@ -56,6 +66,7 @@ export function StampComposite({
     uploadedImage,
     scale,
     adjustments,
+    placedStickers = [],
     showBackground = true,
     isPrint = false,
     hideRealStamp = false
@@ -149,15 +160,44 @@ export function StampComposite({
                                 }}
                             >
                                 {uploadedImage ? (
-                                    <img
-                                        src={uploadedImage}
-                                        alt={`User content ${index + 1}`}
-                                        className={`w-full h-full pointer-events-none object-contain`}
-                                        style={{
-                                            transform: `scale(${zoom / 100}) translate(${position.x * (scale / 50)}px, ${position.y * (scale / 50)}px)`,
-                                            filter: `brightness(${brightness}%) contrast(${contrast}%) ${filter !== "none" ? filter : ""}`,
-                                        }}
-                                    />
+                                    <div className="relative w-full h-full pointer-events-none">
+                                        <img
+                                            src={uploadedImage}
+                                            alt={`User content ${index + 1}`}
+                                            className={`w-full h-full object-contain origin-center`}
+                                            style={{
+                                                transform: isPrint
+                                                    ? `scale(${zoom / 100}) translate(${position.x / 50}cm, ${position.y / 50}cm)`
+                                                    : `scale(${zoom / 100}) translate(${position.x * (scale / 50)}px, ${position.y * (scale / 50)}px)`,
+                                                filter: `brightness(${brightness}%) contrast(${contrast}%) ${filter !== "none" ? filter : ""}`,
+                                            }}
+                                        />
+                                        {/* Stickers Layer */}
+                                        {placedStickers.map((sticker) => {
+                                            // Calculate consistent font size based on slot size
+                                            const slotHeightPx = (template.userImageHeight * scale);
+                                            const baseFontSizePx = slotHeightPx * 0.25; // Base is 25% of height
+                                            const finalFontSize = isPrint
+                                                ? `${(template.userImageHeight * 0.25) * sticker.scale}cm`
+                                                : `${baseFontSizePx * sticker.scale}px`;
+
+                                            return (
+                                                <div
+                                                    key={sticker.id}
+                                                    className="absolute text-center flex items-center justify-center select-none"
+                                                    style={{
+                                                        left: `${sticker.x}%`,
+                                                        top: `${sticker.y}%`,
+                                                        transform: `translate(-50%, -50%) scale(1) rotate(${sticker.rotation}deg)`,
+                                                        fontSize: finalFontSize,
+                                                        zIndex: 10
+                                                    }}
+                                                >
+                                                    {sticker.content}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 ) : (
                                     <div className="w-full h-full bg-gray-100/30 flex items-center justify-center text-[8px] text-gray-400">
                                         (No Image)

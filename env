@@ -1,0 +1,18 @@
+# Database
+DATABASE_URL="postgresql://postgres.gnmkqsaoyyazscuvaiyw:tang182325%40%21@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+DIRECT_URL="postgresql://postgres:tang182325%40%21@db.gnmkqsaoyyazscuvaiyw.supabase.co:5432/postgres"
+
+# Cloudinary (Get these from your Cloudinary dashboard)
+
+CLOUDINARY_CLOUD_NAME="ducukksb4"
+CLOUDINARY_API_KEY="266289121164268"
+CLOUDINARY_API_SECRET="XVfw16gIBi6jR5yeyr5aWSoiPig"
+
+# Next Auth
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="88e18a71f9db2f5a595031ac39996e47e6020bdc88050851d941fdc6a2ec4"
+AUTH_SECRET="88e18a71f9db2f5a595031ac39996e47e6020bdc88050851d941fdc6a2ec4"
+
+# Admin Authentication
+ADMIN_PASSWORD="admin1234"
+

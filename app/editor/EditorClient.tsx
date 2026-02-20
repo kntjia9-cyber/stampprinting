@@ -27,6 +27,16 @@ interface ExtendedTemplate extends StampTemplate {
     whiteBorderHeight: number | null;
     whiteBorderX: number | null;
     whiteBorderY: number | null;
+    price: number;
+}
+
+interface PlacedSticker {
+    id: string;
+    content: string;
+    x: number;
+    y: number;
+    scale: number;
+    rotation: number;
 }
 
 import { StampComposite } from "@/components/StampComposite";
@@ -55,6 +65,46 @@ export default function EditorClient({ templates }: EditorClientProps) {
     const [contrast, setContrast] = useState(100);
     const [filter, setFilter] = useState("none"); // none, grayscale, sepia, invert
     const [showPreview, setShowPreview] = useState(false);
+
+    // Stickers State
+    const [placedStickers, setPlacedStickers] = useState<PlacedSticker[]>([]);
+    const [selectedStickerId, setSelectedStickerId] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<"templates" | "stickers">("templates");
+    const [stickerCategory, setStickerCategory] = useState<"hearts" | "cute" | "emojis" | "frames" | "flowers">("hearts");
+
+    const stickerOptions = {
+        hearts: ["❤️", "💖", "💝", "💕", "💗", "💓"],
+        cute: ["🐱", "🐶", "🐰", "🐼", "🦊", "🐻", "🦁", "🐵"],
+        emojis: ["😊", "😎", "🌈", "✨", "🔥", "⭐", "🍀", "🎨"],
+        frames: ["🖼️", "💟", "✨", "💫", "💠", "🔳", "⭕", "❌"],
+        flowers: ["🌸", "🌹", "🌻", "🌼", "🌷", "🌺", "💮", "🌵"]
+    };
+
+    const addSticker = (content: string) => {
+        const newSticker: PlacedSticker = {
+            id: Math.random().toString(36).substr(2, 9),
+            content,
+            x: 50,
+            y: 50,
+            scale: 1,
+            rotation: 0
+        };
+        setPlacedStickers([...placedStickers, newSticker]);
+        setSelectedStickerId(newSticker.id);
+    };
+
+    const updateSelectedSticker = (updates: Partial<PlacedSticker>) => {
+        if (!selectedStickerId) return;
+        setPlacedStickers(placedStickers.map(s =>
+            s.id === selectedStickerId ? { ...s, ...updates } : s
+        ));
+    };
+
+    const deleteSelectedSticker = () => {
+        if (!selectedStickerId) return;
+        setPlacedStickers(placedStickers.filter(s => s.id !== selectedStickerId));
+        setSelectedStickerId(null);
+    };
 
     const handlePrint = () => {
         // Simple print command, we'll ensure the content is ready via portal
@@ -186,15 +236,46 @@ export default function EditorClient({ templates }: EditorClientProps) {
             formData.append("templateId", selectedTemplateId);
             formData.append("backgroundUrl", selectedBackgroundUrl || currentTemplate.backgroundUrl);
             formData.append("quantity", "1");
-            formData.append("price", "100"); // You can make this dynamic based on template
+            formData.append("price", (currentTemplate.price || 100).toString()); // Use template price
             formData.append("image", adjustedBlob, "stamp-image-adjusted.png");
             formData.append("adjustments", JSON.stringify({
                 zoom,
                 position: imagePosition,
                 brightness,
                 contrast,
-                filter
+                filter,
+                placedStickers // Save stickers metadata
             }));
+
+            // Sync with canvas rendering (Add stickers to canvas)
+            const stickersToDraw = placedStickers;
+            for (const sticker of stickersToDraw) {
+                ctx.save();
+                // Position is 0-100% relative to user image canvas
+                const targetX = (sticker.x / 100) * imageWidth;
+                const targetY = (sticker.y / 100) * imageHeight;
+                ctx.translate(targetX, targetY);
+                ctx.rotate((sticker.rotation * Math.PI) / 180);
+
+                // Calculate font size relative to canvas height (matching 25% base size)
+                const canvasFontSize = imageHeight * 0.25 * sticker.scale;
+                ctx.font = `${canvasFontSize}px Arial`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(sticker.content, 0, 0);
+                ctx.restore();
+            }
+
+            // Re-create blob with stickers
+            const finalBlobWithStickers = await new Promise<Blob>((resolve, reject) => {
+                canvas.toBlob((blob) => {
+                    if (blob) resolve(blob);
+                    else reject(new Error("Failed to create final blob"));
+                }, 'image/png');
+            });
+
+            // Rewrite form data image
+            formData.set("image", finalBlobWithStickers, "stamp-image-adjusted.png");
 
             // Send to API
             const apiResponse = await fetch("/api/orders", {
@@ -228,50 +309,107 @@ export default function EditorClient({ templates }: EditorClientProps) {
         }
     };
 
-    const handleMouseDown = (e: React.MouseEvent) => {
+    const [isDraggingStickerId, setIsDraggingStickerId] = useState<string | null>(null);
+
+    const handleMouseDown = (e: React.MouseEvent, stickerId: string | null = null) => {
         if (!uploadedImage) return;
-        setIsDragging(true);
-        setDragStart({
-            x: e.clientX - imagePosition.x,
-            y: e.clientY - imagePosition.y,
-        });
+
+        if (stickerId) {
+            setIsDraggingStickerId(stickerId);
+            setSelectedStickerId(stickerId);
+            setIsDragging(true);
+            const sticker = placedStickers.find(s => s.id === stickerId);
+            if (sticker) {
+                // Get container dimensions to calculate relative offset
+                const rect = e.currentTarget.parentElement?.getBoundingClientRect();
+                if (rect) {
+                    setDragStart({
+                        x: e.clientX,
+                        y: e.clientY,
+                    });
+                }
+            }
+        } else {
+            setIsDraggingStickerId(null);
+            setIsDragging(true);
+            setDragStart({
+                x: e.clientX - imagePosition.x,
+                y: e.clientY - imagePosition.y,
+            });
+        }
     };
 
     const handleMouseMove = (e: React.MouseEvent) => {
         if (isDragging) {
-            setImagePosition({
-                x: e.clientX - dragStart.x,
-                y: e.clientY - dragStart.y,
-            });
+            if (isDraggingStickerId) {
+                // Move sticker
+                const rect = e.currentTarget.getBoundingClientRect();
+                if (rect) {
+                    const xPercent = ((e.clientX - rect.left) / rect.width) * 100;
+                    const yPercent = ((e.clientY - rect.top) / rect.height) * 100;
+
+                    setPlacedStickers(prev => prev.map(s =>
+                        s.id === isDraggingStickerId ? { ...s, x: xPercent, y: yPercent } : s
+                    ));
+                }
+            } else {
+                // Move background image
+                setImagePosition({
+                    x: e.clientX - dragStart.x,
+                    y: e.clientY - dragStart.y,
+                });
+            }
         }
     };
 
     const handleMouseUp = () => {
         setIsDragging(false);
+        setIsDraggingStickerId(null);
     };
 
-    const handleTouchStart = (e: React.TouchEvent) => {
+    const handleTouchStart = (e: React.TouchEvent, stickerId: string | null = null) => {
         if (!uploadedImage) return;
         const touch = e.touches[0];
-        setIsDragging(true);
-        setDragStart({
-            x: touch.clientX - imagePosition.x,
-            y: touch.clientY - imagePosition.y,
-        });
+
+        if (stickerId) {
+            setIsDraggingStickerId(stickerId);
+            setSelectedStickerId(stickerId);
+            setIsDragging(true);
+            setDragStart({ x: touch.clientX, y: touch.clientY });
+        } else {
+            setIsDraggingStickerId(null);
+            setIsDragging(true);
+            setDragStart({
+                x: touch.clientX - imagePosition.x,
+                y: touch.clientY - imagePosition.y,
+            });
+        }
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
         if (isDragging) {
             const touch = e.touches[0];
-            setImagePosition({
-                x: touch.clientX - dragStart.x,
-                y: touch.clientY - dragStart.y,
-            });
+            if (isDraggingStickerId) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                if (rect) {
+                    const xPercent = ((touch.clientX - rect.left) / rect.width) * 100;
+                    const yPercent = ((touch.clientY - rect.top) / rect.height) * 100;
+                    setPlacedStickers(prev => prev.map(s =>
+                        s.id === isDraggingStickerId ? { ...s, x: xPercent, y: yPercent } : s
+                    ));
+                }
+            } else {
+                setImagePosition({
+                    x: touch.clientX - dragStart.x,
+                    y: touch.clientY - dragStart.y,
+                });
+            }
         }
     };
 
     const handleTouchEnd = () => {
         setIsDragging(false);
+        setIsDraggingStickerId(null);
     };
 
     // Get current template details
@@ -346,153 +484,257 @@ export default function EditorClient({ templates }: EditorClientProps) {
                 <div className="grid lg:grid-cols-3 gap-8">
                     {/* Left Panel - Controls */}
                     <div className="lg:col-span-1 space-y-4">
-                        {/* Upload Section */}
-                        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20">
-                            <h2 className="text-lg font-bold text-white mb-3">📸 อัพโหลดรูป</h2>
-                            <label className="block">
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleImageUpload}
-                                    className="hidden"
-                                    id="image-upload"
-                                />
-                                <div className="cursor-pointer bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white px-4 py-2.5 rounded-xl text-center font-bold transition-all text-sm">
-                                    เลือกรูปภาพ
-                                </div>
-                            </label>
+                        {/* Tabs */}
+                        <div className="flex bg-white/10 backdrop-blur-lg rounded-xl p-1 border border-white/10">
+                            <button
+                                onClick={() => setActiveTab("templates")}
+                                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === "templates" ? "bg-purple-600 text-white shadow-lg" : "text-purple-200 hover:bg-white/5"}`}
+                            >
+                                📐 แบบ&ปรับรูป
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("stickers")}
+                                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === "stickers" ? "bg-purple-600 text-white shadow-lg" : "text-purple-200 hover:bg-white/5"}`}
+                            >
+                                ✨ สติ๊กเกอร์
+                            </button>
                         </div>
 
-                        {/* Zoom Control */}
-                        {uploadedImage && (
-                            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20">
-                                <h3 className="text-base font-bold text-white mb-3">🔍 ซูม</h3>
-                                <input
-                                    type="range"
-                                    min="50"
-                                    max="300"
-                                    value={zoom}
-                                    onChange={(e) => setZoom(Number(e.target.value))}
-                                    className="w-full h-1.5 bg-purple-300 rounded-lg appearance-none cursor-pointer"
-                                />
-                                <p className="text-purple-200 text-center mt-1.5 text-xs">{zoom}%</p>
-                            </div>
-                        )}
-
-                        {/* Image Adjustments */}
-                        {uploadedImage && (
-                            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20">
-                                <h3 className="text-base font-bold text-white mb-3">✨ ปรับแต่งภาพ</h3>
-
-                                <div className="space-y-3">
-                                    {/* Brightness */}
-                                    <div>
-                                        <div className="flex justify-between text-xs text-purple-200 mb-1">
-                                            <span>ความสว่าง</span>
-                                            <span>{brightness}%</span>
-                                        </div>
+                        {activeTab === "templates" ? (
+                            <>
+                                {/* Upload Section */}
+                                <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20">
+                                    <h2 className="text-lg font-bold text-white mb-3">📸 อัพโหลดรูป</h2>
+                                    <label className="block">
                                         <input
-                                            type="range"
-                                            min="0"
-                                            max="200"
-                                            value={brightness}
-                                            onChange={(e) => setBrightness(Number(e.target.value))}
-                                            className="w-full h-1.5 bg-purple-300 rounded-lg appearance-none cursor-pointer"
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleImageUpload}
+                                            className="hidden"
+                                            id="image-upload"
                                         />
-                                    </div>
-
-                                    {/* Contrast */}
-                                    <div>
-                                        <div className="flex justify-between text-xs text-purple-200 mb-1">
-                                            <span>ความคมชัด</span>
-                                            <span>{contrast}%</span>
+                                        <div className="cursor-pointer bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white px-4 py-2.5 rounded-xl text-center font-bold transition-all text-sm">
+                                            เลือกรูปภาพ
                                         </div>
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max="200"
-                                            value={contrast}
-                                            onChange={(e) => setContrast(Number(e.target.value))}
-                                            className="w-full h-1.5 bg-purple-300 rounded-lg appearance-none cursor-pointer"
-                                        />
-                                    </div>
-
-                                    {/* Filters */}
-                                    <div className="grid grid-cols-2 gap-2 mt-2">
-                                        <button
-                                            onClick={() => setFilter("none")}
-                                            className={`px-2 py-1.5 rounded-lg text-xs transition-all ${filter === "none" ? "bg-purple-600 text-white" : "bg-white/10 text-purple-200 hover:bg-white/20"}`}
-                                        >
-                                            ปกติ
-                                        </button>
-                                        <button
-                                            onClick={() => setFilter("grayscale(100%)")}
-                                            className={`px-2 py-1.5 rounded-lg text-xs transition-all ${filter === "grayscale(100%)" ? "bg-purple-600 text-white" : "bg-white/10 text-purple-200 hover:bg-white/20"}`}
-                                        >
-                                            ขาวดำ
-                                        </button>
-                                        <button
-                                            onClick={() => setFilter("sepia(100%)")}
-                                            className={`px-2 py-1.5 rounded-lg text-xs transition-all ${filter === "sepia(100%)" ? "bg-purple-600 text-white" : "bg-white/10 text-purple-200 hover:bg-white/20"}`}
-                                        >
-                                            ซีเปีย
-                                        </button>
-                                        <button
-                                            onClick={() => setFilter("invert(100%)")}
-                                            className={`px-2 py-1.5 rounded-lg text-xs transition-all ${filter === "invert(100%)" ? "bg-purple-600 text-white" : "bg-white/10 text-purple-200 hover:bg-white/20"}`}
-                                        >
-                                            กลับสี
-                                        </button>
-                                    </div>
+                                    </label>
                                 </div>
-                            </div>
-                        )}
 
+                                {/* Image Tools - Zoom & Adjustments */}
+                                {uploadedImage && (
+                                    <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20">
+                                        <h3 className="text-base font-bold text-white mb-4">⚒️ เครื่องมือปรับภาพ</h3>
 
-
-                        {/* Stamp Type */}
-                        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20">
-                            <h3 className="text-base font-bold text-white mb-3">📐 แบบแสตมป์</h3>
-                            <div className="space-y-2">
-                                {templates.map((template: ExtendedTemplate) => (
-                                    <div key={template.id} className="space-y-1.5">
-                                        <button
-                                            onClick={() => {
-                                                setSelectedTemplateId(template.id);
-                                                setIsCustomSize(false);
-                                            }}
-                                            className={`w-full px-3 py-2.5 rounded-lg transition-all text-left text-sm ${selectedTemplateId === template.id && !isCustomSize
-                                                ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold"
-                                                : "bg-white/10 hover:bg-white/20 text-white"
-                                                }`}
-                                        >
-                                            {template.name}
-                                        </button>
-
-                                        {/* Background Selection Menu */}
-                                        {selectedTemplateId === template.id && !isCustomSize && template.backgrounds && template.backgrounds.length > 0 && (
-                                            <div className="grid grid-cols-4 gap-1.5 px-1 pb-1">
-                                                {template.backgrounds.map((bg: TemplateBackground) => {
-                                                    return (
-                                                        <button
-                                                            key={bg.id}
-                                                            onClick={() => setSelectedBackgroundUrl(bg.url)}
-                                                            className={`aspect-square rounded-md overflow-hidden border-2 transition-all flex items-center justify-center bg-gray-100 ${selectedBackgroundUrl === bg.url ? "border-pink-500 ring-2 ring-pink-500/50" : "border-white/10 hover:border-white/30"}`}
-                                                        >
-                                                            <img
-                                                                src={bg.url}
-                                                                alt="Background thumbnail"
-                                                                className="w-full h-full object-contain"
-                                                            />
-                                                        </button>
-                                                    );
-                                                })}
+                                        <div className="flex justify-around items-end gap-2 pb-2">
+                                            {/* Zoom */}
+                                            <div className="flex flex-col items-center gap-2">
+                                                <span className="text-[10px] text-purple-200 text-center h-8 leading-tight">ซูม<br />{zoom}%</span>
+                                                <input
+                                                    type="range"
+                                                    min="50"
+                                                    max="300"
+                                                    value={zoom}
+                                                    onChange={(e) => setZoom(Number(e.target.value))}
+                                                    className="range-vertical transition-all accent-purple-500 cursor-pointer"
+                                                />
                                             </div>
-                                        )}
+
+                                            {/* Brightness */}
+                                            <div className="flex flex-col items-center gap-2">
+                                                <span className="text-[10px] text-purple-200 text-center h-8 leading-tight">ความสว่าง<br />{brightness}%</span>
+                                                <input
+                                                    type="range"
+                                                    min="0"
+                                                    max="200"
+                                                    value={brightness}
+                                                    onChange={(e) => setBrightness(Number(e.target.value))}
+                                                    className="range-vertical transition-all accent-purple-500 cursor-pointer"
+                                                />
+                                            </div>
+
+                                            {/* Contrast */}
+                                            <div className="flex flex-col items-center gap-2">
+                                                <span className="text-[10px] text-purple-200 text-center h-8 leading-tight">คมชัด<br />{contrast}%</span>
+                                                <input
+                                                    type="range"
+                                                    min="0"
+                                                    max="200"
+                                                    value={contrast}
+                                                    onChange={(e) => setContrast(Number(e.target.value))}
+                                                    className="range-vertical transition-all accent-purple-500 cursor-pointer"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Filters */}
+                                        <div className="grid grid-cols-4 gap-2 mt-6">
+                                            <button
+                                                onClick={() => setFilter("none")}
+                                                className={`px-1 py-1.5 rounded-lg text-[10px] transition-all ${filter === "none" ? "bg-purple-600 text-white" : "bg-white/10 text-purple-200 hover:bg-white/20"}`}
+                                            >
+                                                ปกติ
+                                            </button>
+                                            <button
+                                                onClick={() => setFilter("grayscale(100%)")}
+                                                className={`px-1 py-1.5 rounded-lg text-[10px] transition-all ${filter === "grayscale(100%)" ? "bg-purple-600 text-white" : "bg-white/10 text-purple-200 hover:bg-white/20"}`}
+                                            >
+                                                ขาวดำ
+                                            </button>
+                                            <button
+                                                onClick={() => setFilter("sepia(100%)")}
+                                                className={`px-1 py-1.5 rounded-lg text-[10px] transition-all ${filter === "sepia(100%)" ? "bg-purple-600 text-white" : "bg-white/10 text-purple-200 hover:bg-white/20"}`}
+                                            >
+                                                ซีเปีย
+                                            </button>
+                                            <button
+                                                onClick={() => setFilter("invert(100%)")}
+                                                className={`px-1 py-1.5 rounded-lg text-[10px] transition-all ${filter === "invert(100%)" ? "bg-purple-600 text-white" : "bg-white/10 text-purple-200 hover:bg-white/20"}`}
+                                            >
+                                                กลับสี
+                                            </button>
+                                        </div>
                                     </div>
-                                ))}
+                                )}
+
+
+
+                                {/* Stamp Type */}
+                                <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20">
+                                    <h3 className="text-base font-bold text-white mb-3">📐 แบบแสตมป์</h3>
+                                    <div className="space-y-2">
+                                        {templates.map((template: ExtendedTemplate) => (
+                                            <div key={template.id} className="space-y-1.5">
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedTemplateId(template.id);
+                                                        setIsCustomSize(false);
+                                                    }}
+                                                    className={`w-full px-3 py-2.5 rounded-lg transition-all text-left text-sm flex justify-between items-center ${selectedTemplateId === template.id && !isCustomSize
+                                                        ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold"
+                                                        : "bg-white/10 hover:bg-white/20 text-white"
+                                                        }`}
+                                                >
+                                                    <span>{template.name}</span>
+                                                    <span className={`${selectedTemplateId === template.id && !isCustomSize ? "text-white" : "text-purple-300"} font-bold`}>
+                                                        {template.price} ฿
+                                                    </span>
+                                                </button>
+
+                                                {/* Background Selection Menu */}
+                                                {selectedTemplateId === template.id && !isCustomSize && template.backgrounds && template.backgrounds.length > 0 && (
+                                                    <div className="grid grid-cols-4 gap-1.5 px-1 pb-1">
+                                                        {template.backgrounds.map((bg: TemplateBackground) => {
+                                                            return (
+                                                                <button
+                                                                    key={bg.id}
+                                                                    onClick={() => setSelectedBackgroundUrl(bg.url)}
+                                                                    className={`aspect-square rounded-md overflow-hidden border-2 transition-all flex items-center justify-center bg-gray-100 ${selectedBackgroundUrl === bg.url ? "border-pink-500 ring-2 ring-pink-500/50" : "border-white/10 hover:border-white/30"}`}
+                                                                >
+                                                                    <img
+                                                                        src={bg.url}
+                                                                        alt="Background thumbnail"
+                                                                        className="w-full h-full object-contain"
+                                                                    />
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            /* Stickers Panel */
+                            <div className="space-y-4">
+                                <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20">
+                                    <h3 className="text-base font-bold text-white mb-3">✨ เลือกสติ๊กเกอร์</h3>
+
+                                    {/* Category Selector */}
+                                    <div className="flex flex-wrap gap-2 mb-4">
+                                        {(["hearts", "cute", "emojis", "frames", "flowers"] as const).map((cat) => (
+                                            <button
+                                                key={cat}
+                                                onClick={() => setStickerCategory(cat)}
+                                                className={`px-3 py-1.5 rounded-lg text-xs capitalize transition-all ${stickerCategory === cat ? "bg-purple-600 text-white" : "bg-white/10 text-purple-200"}`}
+                                            >
+                                                {cat === "hearts" ? "❤️" :
+                                                    cat === "cute" ? "🐱" :
+                                                        cat === "emojis" ? "✨" :
+                                                            cat === "frames" ? "🖼️" : "🌸"}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* Stickers Grid */}
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {stickerOptions[stickerCategory].map((emoji, idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => addSticker(emoji)}
+                                                className="aspect-square bg-white/5 hover:bg-white/20 rounded-xl flex items-center justify-center text-2xl transition-all hover:scale-110"
+                                            >
+                                                {emoji}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Selected Sticker Controls */}
+                                {selectedStickerId && (
+                                    <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-pink-500/50 animate-in fade-in zoom-in duration-300">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="text-sm font-bold text-white">⚙️ ปรับแต่งสติ๊กเกอร์</h3>
+                                            <button
+                                                onClick={deleteSelectedSticker}
+                                                className="text-red-400 hover:text-red-300 transition-colors"
+                                            >
+                                                🗑️ ลบ
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            {/* Scale */}
+                                            <div>
+                                                <div className="flex justify-between text-[10px] text-purple-200 mb-1">
+                                                    <span>ขนาด</span>
+                                                    <span>{Math.round((placedStickers.find(s => s.id === selectedStickerId)?.scale || 1) * 100)}%</span>
+                                                </div>
+                                                <input
+                                                    type="range"
+                                                    min="0.2"
+                                                    max="3"
+                                                    step="0.1"
+                                                    value={placedStickers.find(s => s.id === selectedStickerId)?.scale || 1}
+                                                    onChange={(e) => updateSelectedSticker({ scale: Number(e.target.value) })}
+                                                    className="w-full h-1.5 bg-purple-300 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                                                />
+                                            </div>
+
+                                            {/* Rotation */}
+                                            <div>
+                                                <div className="flex justify-between text-[10px] text-purple-200 mb-1">
+                                                    <span>หมุน</span>
+                                                    <span>{placedStickers.find(s => s.id === selectedStickerId)?.rotation || 0}°</span>
+                                                </div>
+                                                <input
+                                                    type="range"
+                                                    min="-180"
+                                                    max="180"
+                                                    value={placedStickers.find(s => s.id === selectedStickerId)?.rotation || 0}
+                                                    onChange={(e) => updateSelectedSticker({ rotation: Number(e.target.value) })}
+                                                    className="w-full h-1.5 bg-purple-300 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                                                />
+                                            </div>
+
+                                            <p className="text-[10px] text-purple-300 italic text-center">
+                                                * คลิกหรือแตะที่สติ๊กเกอร์บนรูปเพื่อลากย้ายตำแหน่ง
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                        </div>
+                        )}
                     </div>
 
                     {/* Right Panel - Preview */}
@@ -511,6 +753,8 @@ export default function EditorClient({ templates }: EditorClientProps) {
                                                     template={currentTemplate}
                                                     backgroundUrl={selectedBackgroundUrl || currentTemplate.backgroundUrl}
                                                     uploadedImage={uploadedImage}
+                                                    showBackground={true}
+                                                    placedStickers={placedStickers}
                                                     scale={21} // 42% scale
                                                     adjustments={{
                                                         zoom,
@@ -540,19 +784,51 @@ export default function EditorClient({ templates }: EditorClientProps) {
                                             onTouchEnd={handleTouchEnd}
                                         >
                                             {uploadedImage ? (
-                                                <img
-                                                    src={uploadedImage}
-                                                    alt="Preview"
-                                                    className={`w-full h-full object-contain origin-center ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
-                                                    style={{
-                                                        transform: `scale(${zoom / 100}) translate(${imagePosition.x}px, ${imagePosition.y}px)`,
-                                                        filter: `brightness(${brightness}%) contrast(${contrast}%) ${filter !== "none" ? filter : ""}`,
-                                                        touchAction: 'none'
-                                                    }}
-                                                    onMouseDown={handleMouseDown}
-                                                    onTouchStart={handleTouchStart}
-                                                    draggable={false}
-                                                />
+                                                <>
+                                                    <img
+                                                        src={uploadedImage}
+                                                        alt="Preview"
+                                                        className={`w-full h-full object-contain origin-center ${isDragging && !isDraggingStickerId ? "cursor-grabbing" : "cursor-grab"}`}
+                                                        style={{
+                                                            transform: `scale(${zoom / 100}) translate(${imagePosition.x}px, ${imagePosition.y}px)`,
+                                                            filter: `brightness(${brightness}%) contrast(${contrast}%) ${filter !== "none" ? filter : ""}`,
+                                                            touchAction: 'none'
+                                                        }}
+                                                        onMouseDown={(e) => handleMouseDown(e)}
+                                                        onTouchStart={(e) => handleTouchStart(e)}
+                                                        draggable={false}
+                                                    />
+                                                    {/* Interactive Stickers */}
+                                                    {placedStickers.map((sticker) => {
+                                                        const slotHeightPx = (currentTemplate?.userImageHeight || 0) * 50;
+                                                        const baseFontSizePx = slotHeightPx * 0.25;
+                                                        const finalFontSize = `${baseFontSizePx * sticker.scale}px`;
+
+                                                        return (
+                                                            <div
+                                                                key={sticker.id}
+                                                                className={`absolute flex items-center justify-center select-none cursor-move transition-shadow ${selectedStickerId === sticker.id ? "ring-2 ring-pink-500 bg-pink-500/10" : "hover:bg-white/10"}`}
+                                                                style={{
+                                                                    left: `${sticker.x}%`,
+                                                                    top: `${sticker.y}%`,
+                                                                    transform: `translate(-50%, -50%) scale(1) rotate(${sticker.rotation}deg)`,
+                                                                    fontSize: finalFontSize,
+                                                                    zIndex: 20
+                                                                }}
+                                                                onMouseDown={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleMouseDown(e, sticker.id);
+                                                                }}
+                                                                onTouchStart={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleTouchStart(e, sticker.id);
+                                                                }}
+                                                            >
+                                                                {sticker.content}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </>
                                             ) : (
                                                 <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 text-gray-400">
                                                     <div className="text-4xl mb-2">📷</div>
@@ -588,6 +864,7 @@ export default function EditorClient({ templates }: EditorClientProps) {
                                     backgroundUrl={selectedBackgroundUrl || currentTemplate.backgroundUrl}
                                     uploadedImage={uploadedImage}
                                     scale={50} // 100% scale (actual size)
+                                    placedStickers={placedStickers}
                                     adjustments={{
                                         zoom,
                                         position: imagePosition,
@@ -623,6 +900,7 @@ export default function EditorClient({ templates }: EditorClientProps) {
                                 scale={50} // 100% scale for printing
                                 isPrint={true} // Use print coordinates
                                 hideRealStamp={true} // Don't print the sample layer
+                                placedStickers={placedStickers}
                                 adjustments={{
                                     zoom,
                                     position: imagePosition,

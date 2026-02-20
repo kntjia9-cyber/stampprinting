@@ -11,7 +11,7 @@ export function Navbar() {
         <nav className="bg-black/30 backdrop-blur-md border-b border-white/10 sticky top-0 z-50">
             <div className="container mx-auto px-4 py-4 flex items-center justify-between">
                 <Link href="/" className="text-xl md:text-2xl font-bold text-white hover:text-purple-300 transition-colors">
-                    🎨 StampApp
+                    🎨 Stamp Printing
                 </Link>
 
                 <div className="flex items-center gap-4 md:gap-6">
