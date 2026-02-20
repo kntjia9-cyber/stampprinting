@@ -1,6 +1,9 @@
-import { auth } from "@/auth";
+import NextAuth from "next-auth";
+import { authConfig } from "./auth.config";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+
+// We use a separate Auth instance for Middleware to avoid Prisma/Edge size issues
+const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
     const { nextUrl } = req;
