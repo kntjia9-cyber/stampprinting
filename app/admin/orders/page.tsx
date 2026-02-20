@@ -160,11 +160,11 @@ export default function OrdersPage() {
                                             {/* Side by side images */}
                                             <div className="flex gap-2">
                                                 <div className="relative w-20 h-20 rounded-lg border-2 border-purple-500/30 overflow-hidden bg-white shadow-lg" title="รูปที่อัพโหลด">
-                                                    <img src={item.customImageUrl} alt="user" className="w-full h-full object-contain" />
+                                                    <Image src={item.customImageUrl} alt="user" className="w-full h-full object-contain" width={80} height={80} unoptimized />
                                                     <span className="absolute bottom-0 right-0 bg-purple-500 text-[8px] text-white px-1 font-bold">USER</span>
                                                 </div>
                                                 <div className="relative w-20 h-20 rounded-lg border-2 border-blue-500/30 overflow-hidden bg-white shadow-lg" title="แบ็คกราวด์ที่เลือก">
-                                                    <img src={item.previewUrl} alt="bg" className="w-full h-full object-contain" />
+                                                    <Image src={item.previewUrl} alt="bg" className="w-full h-full object-contain" width={80} height={80} unoptimized />
                                                     <span className="absolute bottom-0 right-0 bg-blue-500 text-[8px] text-white px-1 font-bold">BG</span>
                                                 </div>
                                             </div>
@@ -233,7 +233,7 @@ export default function OrdersPage() {
                                         {selectedOrder.items.map((item) => (
                                             <div key={item.id} className="bg-white/5 rounded-xl p-3 flex gap-4 items-center">
                                                 <div className="w-16 h-16 bg-white rounded-lg overflow-hidden shrink-0">
-                                                    <img src={item.customImageUrl} alt="item" className="w-full h-full object-cover" />
+                                                    <Image src={item.customImageUrl} alt="item" className="w-full h-full object-cover" width={64} height={64} unoptimized />
                                                 </div>
                                                 <div className="flex-grow">
                                                     <p className="text-white font-bold">{item.template.name}</p>
@@ -260,7 +260,7 @@ export default function OrdersPage() {
                                 <h4 className="text-purple-400 font-bold mb-2 uppercase text-xs tracking-wider">Payment Proof</h4>
                                 {selectedOrder.paymentProofUrl ? (
                                     <div className="bg-white/5 rounded-xl p-2">
-                                        <img src={selectedOrder.paymentProofUrl} alt="Payment Proof" className="w-full rounded-lg" />
+                                        <Image src={selectedOrder.paymentProofUrl} alt="Payment Proof" className="w-full rounded-lg" width={500} height={700} unoptimized />
                                         <a href={selectedOrder.paymentProofUrl} target="_blank" className="block text-center mt-3 text-purple-400 hover:text-purple-300 font-bold transition-all">View Full Size</a>
                                     </div>
                                 ) : (
