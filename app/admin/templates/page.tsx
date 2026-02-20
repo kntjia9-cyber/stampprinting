@@ -2,9 +2,9 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Copy } from "lucide-react";
 import prisma from "@/lib/prisma";
-import { getStampTemplates, deleteStampTemplate } from "@/app/actions/stamp-templates";
+import { getStampTemplates, deleteStampTemplate, cloneStampTemplate } from "@/app/actions/stamp-templates";
 import VisibilityToggle from "./_components/VisibilityToggle";
 
 export default async function TemplatesPage() {
@@ -33,6 +33,14 @@ export default async function TemplatesPage() {
                             <h3 className="text-xl font-semibold text-white">{template.name}</h3>
                             <div className="flex gap-2 items-center">
                                 <VisibilityToggle templateId={template.id} initialIsPublic={template.isPublic} />
+                                <form action={cloneStampTemplate.bind(null, template.id)}>
+                                    <button
+                                        title="Clone"
+                                        className="p-2 text-green-400 hover:bg-green-500/10 rounded-lg transition-colors"
+                                    >
+                                        <Copy size={18} />
+                                    </button>
+                                </form>
                                 <Link
                                     href={`/admin/templates/${template.id}`}
                                     className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"

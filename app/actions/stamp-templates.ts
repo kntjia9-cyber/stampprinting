@@ -261,3 +261,32 @@ export async function toggleTemplateVisibility(id: string, isPublic: boolean) {
         throw error;
     }
 }
+export async function cloneStampTemplate(id: string) {
+    try {
+        const template = await prisma.stampTemplate.findUnique({
+            where: { id },
+            include: { backgrounds: true }
+        });
+
+        if (!template) throw new Error("Template not found");
+
+        // Clone the data except for IDs and timestamps
+        const { id: _, createdAt: __, updatedAt: ___, backgrounds, ...data } = template;
+
+        await (prisma.stampTemplate as any).create({
+            data: {
+                ...data,
+                name: `${data.name} (Copy)`,
+                backgrounds: {
+                    create: backgrounds.map(bg => ({ url: bg.url }))
+                }
+            }
+        });
+
+        revalidatePath("/admin/templates");
+        revalidatePath("/editor");
+    } catch (error) {
+        console.error("Error cloning template:", error);
+        throw error;
+    }
+}
