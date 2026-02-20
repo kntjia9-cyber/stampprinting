@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 
 function LoginForm() {
     const router = useRouter();
@@ -41,8 +41,10 @@ function LoginForm() {
                 setError("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
                 setLoading(false);
             } else {
-                // Successful login
-                if (email === "admin@admin.com") {
+                // Successful login - get session to check role
+                const session = await getSession();
+
+                if ((session?.user as any)?.role === "ADMIN") {
                     router.push("/admin/orders");
                 } else {
                     router.push("/");

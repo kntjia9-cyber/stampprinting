@@ -31,7 +31,7 @@ export function Navbar() {
                                 </Link>
                             )}
                             <button
-                                onClick={() => signOut()}
+                                onClick={() => signOut({ callbackUrl: "/" })}
                                 className="text-slate-400 hover:text-red-400 transition-colors"
                                 title="ออกจากระบบ"
                             >

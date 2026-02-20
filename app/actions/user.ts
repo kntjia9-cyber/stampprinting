@@ -94,3 +94,26 @@ export async function updateAdminPassword(adminId: string, newPassword: string) 
         return { error: "Failed to update password" };
     }
 }
+
+export async function updateAdminEmail(adminId: string, newEmail: string) {
+    try {
+        const existingUser = await prisma.user.findUnique({
+            where: { email: newEmail }
+        });
+
+        if (existingUser && existingUser.id !== adminId) {
+            return { error: "อีเมลนี้ถูกใช้งานแล้ว" };
+        }
+
+        await prisma.user.update({
+            where: { id: adminId },
+            data: { email: newEmail }
+        });
+
+        revalidatePath("/admin/settings");
+        return { success: true };
+    } catch (error) {
+        console.error("Update admin email error:", error);
+        return { error: "Failed to update email" };
+    }
+}

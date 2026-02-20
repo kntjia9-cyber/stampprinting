@@ -4,13 +4,14 @@ import { useState, useEffect } from "react";
 import { Save, Loader2, Building2, User, CreditCard, QrCode, Lock, Mail, Key } from "lucide-react";
 import { getSettings, updateSettings } from "@/app/actions/settings";
 import { useSession } from "next-auth/react";
-import { updateAdminPassword } from "@/app/actions/user";
+import { updateAdminPassword, updateAdminEmail } from "@/app/actions/user";
 
 export default function SettingsPage() {
     const { data: session } = useSession();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [savingPassword, setSavingPassword] = useState(false);
+    const [savingEmail, setSavingEmail] = useState(false);
     const [settings, setSettings] = useState({
         bankName: "",
         accountName: "",
@@ -18,8 +19,10 @@ export default function SettingsPage() {
         promptPayId: ""
     });
     const [newPassword, setNewPassword] = useState("");
+    const [adminEmail, setAdminEmail] = useState("");
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
     const [passwordMessage, setPasswordMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+    const [emailMessage, setEmailMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
     useEffect(() => {
         loadSettings();
@@ -35,6 +38,7 @@ export default function SettingsPage() {
                 promptPayId: result.settings.promptPayId
             });
         }
+        setAdminEmail(session?.user?.email || "");
         setLoading(false);
     };
 
@@ -79,6 +83,28 @@ export default function SettingsPage() {
         setSavingPassword(false);
     };
 
+    const handleEmailSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!session?.user?.id) {
+            setEmailMessage({ type: "error", text: "กรุณาเข้าสู่ระบบก่อน" });
+            return;
+        }
+        if (!adminEmail || !adminEmail.includes("@")) {
+            setEmailMessage({ type: "error", text: "กรุณากรอกอีเมลที่ถูกต้อง" });
+            return;
+        }
+
+        setSavingEmail(true);
+        setEmailMessage(null);
+        const result = await updateAdminEmail(session.user.id, adminEmail);
+        if (result.success) {
+            setEmailMessage({ type: "success", text: "ปรับปรุงอีเมลเรียบร้อยแล้ว" });
+        } else {
+            setEmailMessage({ type: "error", text: result.error || "เกิดข้อผิดพลาดในการเปลี่ยนอีเมล" });
+        }
+        setSavingEmail(false);
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
@@ -114,19 +140,39 @@ export default function SettingsPage() {
                     </div>
                     <div className="p-6">
                         <div className="grid md:grid-cols-2 gap-8 items-start">
-                            <div className="space-y-4">
+                            <form onSubmit={handleEmailSubmit} className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-400 mb-1.5 flex items-center gap-2">
                                         <Mail size={14} /> อีเมลล็อกอินหลัก
                                     </label>
-                                    <div className="w-full bg-slate-900/50 border border-white/5 rounded-lg px-4 py-2.5 text-slate-300 font-mono">
-                                        {session?.user?.email || "admin@admin.com"}
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="email"
+                                            value={adminEmail}
+                                            onChange={(e) => setAdminEmail(e.target.value)}
+                                            className="flex-grow bg-slate-900 border border-white/10 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition-all placeholder:text-slate-600"
+                                            placeholder="กรอกอีเมลใหม่..."
+                                            required
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={savingEmail}
+                                            className="px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-lg font-bold text-sm transition-all disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                                        >
+                                            {savingEmail ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                                            เปลี่ยนอีเมล
+                                        </button>
                                     </div>
                                     <p className="mt-1 text-[10px] text-slate-500">* อีเมลนี้ใช้สำหรับการล็อกอินเข้าหลังบ้าน</p>
+                                    {emailMessage && (
+                                        <p className={`mt-2 text-xs ${emailMessage.type === "success" ? "text-green-400" : "text-red-400"}`}>
+                                            {emailMessage.text}
+                                        </p>
+                                    )}
                                 </div>
-                            </div>
+                            </form>
 
-                            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                            <form onSubmit={handlePasswordSubmit} className="space-y-4 pt-4 md:pt-0 border-t md:border-t-0 md:border-l border-white/10 md:pl-8">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-400 mb-1.5 flex items-center gap-2">
                                         <Key size={14} /> เปลี่ยนรหัสผ่านใหม่
@@ -142,10 +188,10 @@ export default function SettingsPage() {
                                         <button
                                             type="submit"
                                             disabled={savingPassword}
-                                            className="px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-lg font-bold text-sm transition-all disabled:opacity-50 flex items-center gap-2"
+                                            className="px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-lg font-bold text-sm transition-all disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
                                         >
                                             {savingPassword ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                                            เปลี่ยน
+                                            เปลี่ยนรหัส
                                         </button>
                                     </div>
                                     {passwordMessage && (
