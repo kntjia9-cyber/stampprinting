@@ -18,26 +18,33 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) return null;
 
-                const user = await prisma.user.findUnique({
-                    where: { email: credentials.email as string }
-                });
+                try {
+                    const user = await prisma.user.findUnique({
+                        where: { email: credentials.email as string }
+                    });
 
-                if (!user || !user.password) return null;
+                    if (!user || !user.password) return null;
 
-                const isPasswordValid = await bcrypt.compare(
-                    credentials.password as string,
-                    user.password
-                );
+                    const isPasswordValid = await bcrypt.compare(
+                        credentials.password as string,
+                        user.password
+                    );
 
-                if (!isPasswordValid) return null;
+                    if (!isPasswordValid) return null;
 
-                return {
-                    id: user.id,
-                    email: user.email,
-                    name: user.name,
-                    role: user.role,
-                };
+                    return {
+                        id: user.id,
+                        email: user.email,
+                        name: user.name,
+                        role: user.role,
+                    };
+                } catch (error) {
+                    console.error("Auth Error:", error);
+                    return null;
+                }
             }
         })
     ],
+    // Explicitly set secret if env isn't picked up (though it should be)
+    secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
 });
