@@ -49,8 +49,8 @@ export default function HomePage() {
                 <QRCodeSection />
 
                 <div className="mt-16 text-center">
-                    <Link href="/admin" className="text-slate-500 hover:text-slate-300 text-sm underline transition-colors">
-                        Admin Dashboard
+                    <Link href="/login" className="text-slate-500 hover:text-slate-300 text-sm underline transition-colors">
+                        เข้าสู่ระบบ (Login)
                     </Link>
                 </div>
             </div>
