@@ -1,8 +1,9 @@
 import Link from "next/link";
+import InstallSection from "@/components/InstallSection";
 
 export default function HomePage() {
     return (
-        <main className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900">
+        <main className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 relative">
             <div className="container mx-auto px-4 py-16">
                 <div className="text-center mb-10 md:mb-16">
                     <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 animate-fade-in px-4">
@@ -14,6 +15,7 @@ export default function HomePage() {
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                    {/* ... existing feature cards ... */}
                     <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105">
                         <div className="text-5xl mb-4">📸</div>
                         <h3 className="text-2xl font-bold text-white mb-3">อัพโหลดรูป</h3>
@@ -45,7 +47,10 @@ export default function HomePage() {
                     </Link>
                 </div>
 
-                <div className="mt-8 text-center">
+                {/* New Static Install Section with QR Code */}
+                <InstallSection />
+
+                <div className="mt-16 text-center">
                     <Link href="/admin" className="text-slate-500 hover:text-slate-300 text-sm underline transition-colors">
                         Admin Dashboard
                     </Link>
