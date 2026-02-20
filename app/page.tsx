@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { QRCodeSection } from "@/components/QRCodeSection";
 
 export default function HomePage() {
     return (
@@ -45,7 +46,9 @@ export default function HomePage() {
                     </Link>
                 </div>
 
-                <div className="mt-8 text-center">
+                <QRCodeSection />
+
+                <div className="mt-16 text-center">
                     <Link href="/admin" className="text-slate-500 hover:text-slate-300 text-sm underline transition-colors">
                         Admin Dashboard
                     </Link>
