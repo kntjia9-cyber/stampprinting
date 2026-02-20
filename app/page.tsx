@@ -4,11 +4,11 @@ export default function HomePage() {
     return (
         <main className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900">
             <div className="container mx-auto px-4 py-16">
-                <div className="text-center mb-16">
-                    <h1 className="text-6xl font-bold text-white mb-4 animate-fade-in">
+                <div className="text-center mb-10 md:mb-16">
+                    <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 animate-fade-in px-4">
                         🎨 Stamp Printing App
                     </h1>
-                    <p className="text-xl text-purple-200">
+                    <p className="text-lg md:text-xl text-purple-200 px-4">
                         สร้างแสตมป์สุดพิเศษด้วยรูปภาพของคุณ
                     </p>
                 </div>

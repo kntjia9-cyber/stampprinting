@@ -308,33 +308,33 @@ export default function EditorClient({ templates }: EditorClientProps) {
                 backgroundHeight={currentTemplate?.backgroundHeight}
             />
             {/* Header */}
-            <header className="bg-black/30 backdrop-blur-md border-b border-white/10">
-                <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-                    <Link href="/" className="text-2xl font-bold text-white hover:text-purple-300 transition-colors">
+            <header className="bg-black/30 backdrop-blur-md border-b border-white/10 sticky top-0 z-40">
+                <div className="container mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <Link href="/" className="text-xl md:text-2xl font-bold text-white hover:text-purple-300 transition-colors">
                         🎨 Stamp Printing App
                     </Link>
-                    <div className="flex gap-4">
+                    <div className="flex flex-wrap justify-center gap-2 md:gap-4">
                         <Link
                             href="/cart"
-                            className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-bold transition-all"
+                            className="px-3 md:px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-bold transition-all text-sm"
                         >
                             🛒 ตะกร้า
                         </Link>
                         <button
                             onClick={() => setShowPreview(true)}
-                            className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold transition-all"
+                            className="px-3 md:px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold transition-all text-sm"
                         >
                             Preview
                         </button>
                         <button
                             onClick={handlePrint}
-                            className="px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all"
+                            className="px-3 md:px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all text-sm"
                         >
                             พิมพ์
                         </button>
                         <button
                             onClick={handleAddToCart}
-                            className="px-6 py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-lg font-bold transition-all"
+                            className="px-3 md:px-6 py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-lg font-bold transition-all text-sm"
                         >
                             เพิ่มลงตะกร้า
                         </button>
@@ -496,12 +496,12 @@ export default function EditorClient({ templates }: EditorClientProps) {
                     </div>
 
                     {/* Right Panel - Preview */}
-                    <div className="lg:col-span-2">
-                        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
-                            <h2 className="text-2xl font-bold text-white mb-6">👁️ ตัวอย่างแสตมป์</h2>
+                    <div className="lg:col-span-2 order-first lg:order-last">
+                        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 md:p-8 border border-white/20">
+                            <h2 className="text-xl md:text-2xl font-bold text-white mb-6">👁️ ตัวอย่างแสตมป์</h2>
 
-                            <div className="bg-white rounded-2xl p-8 min-h-[600px] flex items-center justify-center">
-                                <div className="flex flex-row gap-8 items-center">
+                            <div className="bg-white rounded-2xl p-4 md:p-8 min-h-[400px] md:min-h-[600px] flex items-center justify-center overflow-x-auto">
+                                <div className="flex flex-col md:flex-row gap-8 items-center py-4">
                                     {/* Section 2: Template Background (Modified to show composite at 20% scale) */}
                                     {currentTemplate && !isCustomSize && (
                                         <div className="flex flex-col items-center gap-2">

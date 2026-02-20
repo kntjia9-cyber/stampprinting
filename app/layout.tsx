@@ -6,7 +6,23 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
     title: "Stamp Printing App - Custom Photo Stamps",
-    description: "Create beautiful custom stamps with your photos",
+    description: "สร้างแสตมป์ส่วนตัวด้วยรูปถ่ายของคุณ",
+    manifest: "/manifest.json",
+    themeColor: "#0f172a",
+    viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0",
+    icons: {
+        icon: "/icon.png",
+        shortcut: "/icon.png",
+        apple: "/icon.png",
+    },
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: "black-translucent",
+        title: "StampApp",
+    },
+    formatDetection: {
+        telephone: false,
+    },
 };
 
 export default function RootLayout({

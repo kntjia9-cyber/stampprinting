@@ -161,8 +161,8 @@ export default function CartPage() {
 
             <div className="container mx-auto px-4 py-8">
                 <div className="mb-8">
-                    <h1 className="text-4xl font-bold text-white mb-2">🛒 ตะกร้าสินค้า</h1>
-                    <p className="text-purple-200">
+                    <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 text-center md:text-left">🛒 ตะกร้าสินค้า</h1>
+                    <p className="text-purple-200 text-center md:text-left">
                         {getTotalItems()} รายการ • ยอดรวม {getGrandTotal().toFixed(2)} บาท
                     </p>
                 </div>
@@ -208,12 +208,12 @@ export default function CartPage() {
                                     {order.items.map((item) => (
                                         <div
                                             key={item.id}
-                                            className="flex gap-4 bg-white/5 rounded-xl p-4 border border-white/10"
+                                            className="flex flex-col sm:flex-row gap-4 bg-white/5 rounded-xl p-4 border border-white/10"
                                         >
                                             {/* Preview Images */}
-                                            <div className="flex-shrink-0 flex gap-2">
+                                            <div className="flex-shrink-0 flex gap-2 justify-center sm:justify-start">
                                                 {/* Custom Image (รูปคน) */}
-                                                <div className="w-24 h-24 bg-white rounded-lg overflow-hidden border-2 border-purple-300">
+                                                <div className="w-20 h-20 md:w-24 md:h-24 bg-white rounded-lg overflow-hidden border-2 border-purple-300">
                                                     {item.customImageUrl ? (
                                                         <img
                                                             src={item.customImageUrl}
@@ -228,7 +228,7 @@ export default function CartPage() {
                                                 </div>
 
                                                 {/* Background Image */}
-                                                <div className="w-24 h-24 bg-white rounded-lg overflow-hidden border-2 border-blue-300">
+                                                <div className="w-20 h-20 md:w-24 md:h-24 bg-white rounded-lg overflow-hidden border-2 border-blue-300">
                                                     {item.previewUrl ? (
                                                         <img
                                                             src={item.previewUrl}
@@ -236,7 +236,7 @@ export default function CartPage() {
                                                             className="w-full h-full object-contain"
                                                         />
                                                     ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
                                                             No BG
                                                         </div>
                                                     )}
@@ -244,7 +244,7 @@ export default function CartPage() {
                                             </div>
 
                                             {/* Item Details */}
-                                            <div className="flex-grow">
+                                            <div className="flex-grow text-center sm:text-left">
                                                 <h4 className="text-white font-bold mb-1">
                                                     {item.template.name}
                                                 </h4>
@@ -253,7 +253,7 @@ export default function CartPage() {
                                                 </p>
 
                                                 {/* Quantity Controls */}
-                                                <div className="flex items-center gap-4 text-sm mb-2">
+                                                <div className="flex items-center justify-center sm:justify-start gap-4 text-sm mb-2">
                                                     <span className="text-purple-200">จำนวน:</span>
                                                     <div className="flex items-center gap-2 bg-white/10 rounded-lg p-1">
                                                         <button
@@ -274,7 +274,7 @@ export default function CartPage() {
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-4">
+                                                <div className="flex items-center justify-center sm:justify-start gap-4">
                                                     <span className="text-white font-bold">
                                                         {item.price.toFixed(2)} บาท/ชิ้น
                                                     </span>
@@ -288,9 +288,9 @@ export default function CartPage() {
                                             </div>
 
                                             {/* Subtotal */}
-                                            <div className="flex-shrink-0 text-right">
+                                            <div className="flex-shrink-0 text-center sm:text-right pt-4 sm:pt-0 border-t sm:border-t-0 border-white/10">
                                                 <p className="text-sm text-purple-200 mb-1">รวม</p>
-                                                <p className="text-xl font-bold text-white">
+                                                <p className="text-2xl sm:text-xl font-bold text-white">
                                                     {(item.price * item.quantity).toFixed(2)} ฿
                                                 </p>
                                             </div>
