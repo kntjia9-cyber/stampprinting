@@ -1,0 +1,109 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          String    @default("USER") // USER, ADMIN
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  orders        Order[]
+}
+
+model StampTemplate {
+  id               String   @id @default(cuid())
+  name             String
+  width            Float
+  height           Float
+  backgroundUrl    String
+  backgroundWidth  Float
+  backgroundHeight Float
+  backgroundX      Float
+  backgroundY      Float
+  userImageWidth   Float
+  userImageHeight  Float
+  userImageX       Float
+  userImageY       Float
+  userImagePrintX  Float?   // X position for printing
+  userImagePrintY  Float?   // Y position for printing
+  userImageColumns Int      @default(1)
+  userImageRows    Int      @default(1)
+  userImageColumnSpacing Float @default(0)
+  userImageRowSpacing    Float @default(0)
+  userImagePreviewColumnSpacing Float @default(0)
+  userImagePreviewRowSpacing    Float @default(0)
+  // Deprecated fields
+  userImageCount   Int      @default(1)
+  userImageSpacing Float    @default(0)
+  realStampSampleUrl String?
+  realStampX       Float?
+  realStampY       Float?
+  whiteBorderWidth Float?   // Width of the white rectangle (print only)
+  whiteBorderHeight Float?  // Height of the white rectangle (print only)
+  whiteBorderX     Float?   // X position for printing
+  whiteBorderY     Float?   // Y position for printing
+  isPublic         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  backgrounds      TemplateBackground[]
+  orderItems       OrderItem[]
+}
+
+model TemplateBackground {
+  id         String        @id @default(cuid())
+  url        String
+  templateId String
+  template   StampTemplate @relation(fields: [templateId], references: [id])
+}
+
+model Order {
+  id              Int         @id @default(autoincrement())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  total           Float
+  status          String      @default("PENDING") // PENDING, PAID, SHIPPED, COMPLETED
+  customerName    String?
+  customerAddress String?
+  customerPhone   String?
+  customerEmail   String?
+  paymentProofUrl String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id              String        @id @default(cuid())
+  orderId         Int
+  order           Order         @relation(fields: [orderId], references: [id])
+  templateId      String
+  template        StampTemplate @relation(fields: [templateId], references: [id])
+  quantity        Int
+  price           Float
+  customImageUrl  String
+  previewUrl      String
+  adjustments     String?
+}
+
+model GlobalSettings {
+  id              String   @id @default("settings")
+  bankName        String   @default("ธนาคารกสิกรไทย")
+  accountName     String   @default("Stamp Printing Co., Ltd.")
+  accountNumber   String   @default("123-4-56789-0")
+  promptPayId     String   @default("0811234567")
+  updatedAt       DateTime @updatedAt
+}
