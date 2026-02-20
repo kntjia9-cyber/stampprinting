@@ -80,3 +80,17 @@ export async function updateUserInfo(userId: string, data: { name?: string, phon
         return { error: "Failed to update user info" };
     }
 }
+
+export async function updateAdminPassword(adminId: string, newPassword: string) {
+    try {
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await prisma.user.update({
+            where: { id: adminId },
+            data: { password: hashedPassword }
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Update admin password error:", error);
+        return { error: "Failed to update password" };
+    }
+}

@@ -81,7 +81,7 @@ function LoginForm() {
                         />
                     </div>
 
-                    <div>
+                    <div className="relative">
                         <label className="block text-sm font-medium text-purple-200 mb-1">รหัสผ่าน</label>
                         <input
                             name="password"
@@ -90,6 +90,15 @@ function LoginForm() {
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-white/20"
                             placeholder="••••••••"
                         />
+                        <div className="flex justify-end mt-1">
+                            <button
+                                type="button"
+                                onClick={() => alert("กรุณาติดต่อผู้ดูแลระบบเพื่อรีเซ็ตรหัสผ่าน\nLine: @stampprinting")}
+                                className="text-xs text-purple-400 hover:text-white transition-colors"
+                            >
+                                ลืมรหัสผ่าน?
+                            </button>
+                        </div>
                     </div>
 
                     {error && (
