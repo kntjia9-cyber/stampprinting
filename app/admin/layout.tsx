@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Stamp, ShoppingBag, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Stamp, ShoppingBag, Settings, LogOut, Users } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -39,6 +39,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <Link href="/admin/orders" className={linkClass("/admin/orders")}>
                         <ShoppingBag size={20} className={isActive("/admin/orders") ? "animate-pulse" : ""} />
                         Orders
+                    </Link>
+                    <Link href="/admin/stats" className={linkClass("/admin/stats")}>
+                        <Users size={20} className={isActive("/admin/stats") ? "animate-pulse" : ""} />
+                        Visitor Stats
                     </Link>
                     <Link href="/admin/settings" className={linkClass("/admin/settings")}>
                         <Settings size={20} className={isActive("/admin/settings") ? "animate-pulse" : ""} />

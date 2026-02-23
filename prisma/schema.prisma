@@ -148,3 +148,9 @@ model GlobalSettings {
   promptPayId     String   @default("0811234567")
   updatedAt       DateTime @updatedAt
 }
+model Visit {
+  id        Int      @id @default(autoincrement())
+  visitorId String   // Unique ID per session/browser
+  path      String   @default("/")
+  timestamp DateTime @default(now())
+}
