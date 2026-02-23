@@ -52,12 +52,12 @@ export default async function ProfilePage() {
                                         </div>
                                         <div className="text-right">
                                             <span className={`px-4 py-1 rounded-full text-xs font-bold ${order.status === 'PENDING' ? 'bg-yellow-500 text-white' :
-                                                order.status === 'PAID' ? 'bg-green-500 text-white' :
-                                                    order.status === 'SHIPPED' ? 'bg-blue-500 text-white' :
+                                                order.status === 'PAID' ? 'bg-blue-500 text-white' :
+                                                    order.status === 'SHIPPED' ? 'bg-green-500 text-white' :
                                                         'bg-purple-500 text-white'
                                                 }`}>
                                                 {order.status === 'PENDING' ? 'รอชำระเงิน' :
-                                                    order.status === 'PAID' ? 'ชำระแล้ว' :
+                                                    order.status === 'PAID' ? 'รอดำเนินการจัดส่ง' :
                                                         order.status === 'SHIPPED' ? 'จัดส่งแล้ว' : 'สำเร็จ'}
                                             </span>
                                             <p className="text-2xl font-bold text-white mt-1">{order.total.toFixed(2)} ฿</p>

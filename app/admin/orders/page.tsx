@@ -91,30 +91,6 @@ export default function OrdersPage() {
         }
     };
 
-    const handleToggleStatus = async (orderId: number, currentStatus: string) => {
-        const newStatus = currentStatus === "COMPLETED" ? "PAID" : "COMPLETED";
-        const statusLabel = newStatus === "COMPLETED" ? "พิมพ์แล้ว" : "ยังไม่พิมพ์";
-
-        if (!confirm(`ต้องการเปลี่ยนสถานะเป็น '${statusLabel}' ใช่หรือไม่?`)) return;
-
-        try {
-            const response = await fetch(`/api/admin/orders/${orderId}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: newStatus })
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                fetchOrders();
-            } else {
-                alert("เกิดข้อผิดพลาด: " + data.error);
-            }
-        } catch (error) {
-            console.error("Error updating status:", error);
-            alert("ไม่สามารถอัพเดทสถานะได้");
-        }
-    };
 
     const handleSaveTracking = async (orderId: number) => {
         const trackingNumber = trackingInputs[orderId] || "";
@@ -173,13 +149,18 @@ export default function OrdersPage() {
                                 <div>
                                     <div className="flex items-center gap-3">
                                         <h3 className="text-xl font-bold text-white">Order #{order.id}</h3>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); handleToggleStatus(order.id, order.status); }}
-                                            className={`px-3 py-1 rounded-full text-xs font-bold text-white transition-all shadow-md ${order.status === "COMPLETED" ? "bg-purple-600 hover:bg-purple-700" : "bg-blue-600 hover:bg-blue-700"
-                                                }`}
-                                        >
-                                            {order.status === "COMPLETED" ? "✅ พิมพ์แล้ว" : "⏳ ยังไม่พิมพ์"}
-                                        </button>
+                                        <div className="flex gap-2">
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold text-white shadow-md ${order.status === "PENDING" ? "bg-yellow-500" :
+                                                order.status === "PAID" ? "bg-blue-500" :
+                                                    order.status === "SHIPPED" ? "bg-green-500" :
+                                                        "bg-purple-600"
+                                                }`}>
+                                                {order.status === "PENDING" ? "⏳ รอชำระเงิน" :
+                                                    order.status === "PAID" ? "📦 รอดำเนินการจัดส่ง" :
+                                                        order.status === "SHIPPED" ? "🚚 จัดส่งแล้ว" :
+                                                            "✅ เสร็จสิ้น"}
+                                            </span>
+                                        </div>
                                     </div>
                                     <p className="text-slate-400 text-sm mt-1">{new Date(order.createdAt).toLocaleString("th-TH")}</p>
                                 </div>
@@ -260,13 +241,6 @@ export default function OrdersPage() {
                         <div className="p-6 border-b border-white/10 flex justify-between items-center">
                             <h2 className="text-2xl font-bold text-white">Order Details #{selectedOrder.id}</h2>
                             <div className="flex gap-3">
-                                <button
-                                    onClick={() => handleToggleStatus(selectedOrder.id, selectedOrder.status)}
-                                    className={`px-4 py-2 rounded-lg font-bold transition-all text-white ${selectedOrder.status === "COMPLETED" ? "bg-purple-600 hover:bg-purple-700" : "bg-blue-600 hover:bg-blue-700"
-                                        }`}
-                                >
-                                    {selectedOrder.status === "COMPLETED" ? "✅ พิมพ์แล้ว" : "⏳ ยังไม่พิมพ์"}
-                                </button>
                                 <button onClick={() => setSelectedOrder(null)} className="text-slate-400 hover:text-white text-2xl">&times;</button>
                             </div>
                         </div>

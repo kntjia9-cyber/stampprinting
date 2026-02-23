@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -29,9 +29,15 @@ interface Order {
 export default function CartPage() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
+    const updateTimeouts = useRef<Record<string, any>>({});
 
     useEffect(() => {
         fetchOrders();
+        // Cleanup timeouts on unmount
+        const timeouts = updateTimeouts.current;
+        return () => {
+            Object.values(timeouts).forEach(clearTimeout);
+        };
     }, []);
 
     const fetchOrders = async () => {
@@ -52,27 +58,57 @@ export default function CartPage() {
     const updateQuantity = async (itemId: string, newQuantity: number) => {
         if (newQuantity < 1) return;
 
-        try {
-            const response = await fetch(`/api/orders/items/${itemId}`, {
-                method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ quantity: newQuantity })
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                // Refresh orders
-                await fetchOrders();
-            } else {
-                alert("เกิดข้อผิดพลาด: " + result.error);
+        // 1. Optimistic UI Update
+        const updatedOrders = orders.map(order => {
+            const itemToUpdate = order.items.find(item => item.id === itemId);
+            if (itemToUpdate) {
+                const quantityDiff = newQuantity - itemToUpdate.quantity;
+                const priceDiff = itemToUpdate.price * quantityDiff;
+                
+                return {
+                    ...order,
+                    total: order.total + priceDiff,
+                    items: order.items.map(item => 
+                        item.id === itemId 
+                            ? { ...item, quantity: newQuantity } 
+                            : item
+                    )
+                };
             }
-        } catch (error) {
-            console.error("Error updating quantity:", error);
-            alert("ไม่สามารถอัพเดทจำนวนได้");
+            return order;
+        });
+        
+        setOrders(updatedOrders);
+
+        // 2. Debounced API Call
+        if (updateTimeouts.current[itemId]) {
+            clearTimeout(updateTimeouts.current[itemId]);
         }
+
+        updateTimeouts.current[itemId] = setTimeout(async () => {
+            try {
+                const response = await fetch(`/api/orders/items/${itemId}`, {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ quantity: newQuantity })
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    console.error("Failed to update quantity on server:", result.error);
+                    // On error, we might want to refresh to get the correct state
+                    fetchOrders();
+                }
+            } catch (error) {
+                console.error("Error updating quantity:", error);
+                fetchOrders();
+            } finally {
+                delete updateTimeouts.current[itemId];
+            }
+        }, 500); // 500ms debounce
     };
 
     const deleteItem = async (itemId: string) => {
