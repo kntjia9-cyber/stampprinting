@@ -65,6 +65,7 @@ export default function EditorClient({ templates }: EditorClientProps) {
     const [contrast, setContrast] = useState(100);
     const [filter, setFilter] = useState("none"); // none, grayscale, sepia, invert
     const [showPreview, setShowPreview] = useState(false);
+    const [isAddingToCart, setIsAddingToCart] = useState(false);
 
     // Stickers State
     const [placedStickers, setPlacedStickers] = useState<PlacedSticker[]>([]);
@@ -123,6 +124,8 @@ export default function EditorClient({ templates }: EditorClientProps) {
             return;
         }
 
+        setIsAddingToCart(true);
+
         try {
             // Create canvas to render adjusted image
             const canvas = document.createElement('canvas');
@@ -161,11 +164,15 @@ export default function EditorClient({ templates }: EditorClientProps) {
                 renderWidth = imageHeight * imgAspect;
             }
 
-
             // Sync transformation with CSS: scale(zoom) translate(position)
-            // 1. Move to the center of the target canvas
             ctx.save();
             ctx.clearRect(0, 0, imageWidth, imageHeight);
+
+            // Apply Hardware-Accelerated Filters via ctx.filter
+            const filterStr = `brightness(${brightness}%) contrast(${contrast}%) ${filter !== "none" ? filter : ""}`;
+            ctx.filter = filterStr;
+
+            // 1. Move to the center of the target canvas
             ctx.translate(imageWidth / 2, imageHeight / 2);
 
             // 2. Apply scale (zooms from the center)
@@ -179,75 +186,7 @@ export default function EditorClient({ templates }: EditorClientProps) {
             ctx.drawImage(img, -renderWidth / 2, -renderHeight / 2, renderWidth, renderHeight);
             ctx.restore();
 
-            // apply manual filters for cross-browser reliability (especially mobile Safari)
-            const imageData = ctx.getImageData(0, 0, imageWidth, imageHeight);
-            const data = imageData.data;
-            const b = brightness / 100;
-            const c = contrast / 100;
-            const intercept = 128 * (1 - c);
-
-            for (let i = 0; i < data.length; i += 4) {
-                let r = data[i];
-                let g = data[i + 1];
-                let b_val = data[i + 2];
-
-                // Brightness
-                r *= b;
-                g *= b;
-                b_val *= b;
-
-                // Contrast
-                r = r * c + intercept;
-                g = g * c + intercept;
-                b_val = b_val * c + intercept;
-
-                // Color Filters
-                if (filter === "grayscale(100%)") {
-                    const gray = 0.299 * r + 0.587 * g + 0.114 * b_val;
-                    r = g = b_val = gray;
-                } else if (filter === "sepia(100%)") {
-                    const tr = 0.393 * r + 0.769 * g + 0.189 * b_val;
-                    const tg = 0.349 * r + 0.686 * g + 0.168 * b_val;
-                    const tb = 0.272 * r + 0.534 * g + 0.131 * b_val;
-                    r = tr; g = tg; b_val = tb;
-                } else if (filter === "invert(100%)") {
-                    r = 255 - r;
-                    g = 255 - g;
-                    b_val = 255 - b_val;
-                }
-
-                // Clamp values
-                data[i] = Math.min(255, Math.max(0, r));
-                data[i + 1] = Math.min(255, Math.max(0, g));
-                data[i + 2] = Math.min(255, Math.max(0, b_val));
-            }
-            ctx.putImageData(imageData, 0, 0);
-
-            // Convert canvas to blob
-            const adjustedBlob = await new Promise<Blob>((resolve, reject) => {
-                canvas.toBlob((blob) => {
-                    if (blob) resolve(blob);
-                    else reject(new Error("Failed to create blob"));
-                }, 'image/png');
-            });
-
-            // Prepare form data
-            const formData = new FormData();
-            formData.append("templateId", selectedTemplateId);
-            formData.append("backgroundUrl", selectedBackgroundUrl || currentTemplate.backgroundUrl);
-            formData.append("quantity", "1");
-            formData.append("price", (currentTemplate.price || 100).toString()); // Use template price
-            formData.append("image", adjustedBlob, "stamp-image-adjusted.png");
-            formData.append("adjustments", JSON.stringify({
-                zoom,
-                position: imagePosition,
-                brightness,
-                contrast,
-                filter,
-                placedStickers // Save stickers metadata
-            }));
-
-            // Sync with canvas rendering (Add stickers to canvas)
+            // 5. Draw Stickers (Single Pass)
             const stickersToDraw = placedStickers;
             for (const sticker of stickersToDraw) {
                 ctx.save();
@@ -266,16 +205,29 @@ export default function EditorClient({ templates }: EditorClientProps) {
                 ctx.restore();
             }
 
-            // Re-create blob with stickers
-            const finalBlobWithStickers = await new Promise<Blob>((resolve, reject) => {
+            // 6. Convert to Blob (Single operation)
+            const finalBlob = await new Promise<Blob>((resolve, reject) => {
                 canvas.toBlob((blob) => {
                     if (blob) resolve(blob);
                     else reject(new Error("Failed to create final blob"));
                 }, 'image/png');
             });
 
-            // Rewrite form data image
-            formData.set("image", finalBlobWithStickers, "stamp-image-adjusted.png");
+            // Prepare form data
+            const formData = new FormData();
+            formData.append("templateId", selectedTemplateId);
+            formData.append("backgroundUrl", selectedBackgroundUrl || currentTemplate.backgroundUrl);
+            formData.append("quantity", "1");
+            formData.append("price", (currentTemplate.price || 100).toString());
+            formData.append("image", finalBlob, "stamp-image-adjusted.png");
+            formData.append("adjustments", JSON.stringify({
+                zoom,
+                position: imagePosition,
+                brightness,
+                contrast,
+                filter,
+                placedStickers // Save stickers metadata
+            }));
 
             // Send to API
             const apiResponse = await fetch("/api/orders", {
@@ -294,6 +246,8 @@ export default function EditorClient({ templates }: EditorClientProps) {
         } catch (error) {
             console.error("Error adding to cart:", error);
             alert("เกิดข้อผิดพลาดในการเพิ่มลงตะกร้า");
+        } finally {
+            setIsAddingToCart(false);
         }
     };
 
@@ -472,9 +426,17 @@ export default function EditorClient({ templates }: EditorClientProps) {
                         </button>
                         <button
                             onClick={handleAddToCart}
-                            className="px-3 md:px-6 py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-lg font-bold transition-all text-sm"
+                            disabled={isAddingToCart}
+                            className={`px-3 md:px-6 py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-lg font-bold transition-all text-sm flex items-center gap-2 ${isAddingToCart ? 'opacity-70 cursor-not-allowed' : ''}`}
                         >
-                            เพิ่มลงตะกร้า
+                            {isAddingToCart ? (
+                                <>
+                                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                    กำลังเพิ่ม...
+                                </>
+                            ) : (
+                                "เพิ่มลงตะกร้า"
+                            )}
                         </button>
                     </div>
                 </div>
